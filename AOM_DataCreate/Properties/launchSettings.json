@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "プロファイル 1": {
+      "commandName": "Project",
+      "commandLineArgs": "G:\\マイドライブ\\アークナイツ\\Arknights_OperatorsManager\\inputdata",
+      "hotReloadEnabled": true
+    }
+  }
+}
