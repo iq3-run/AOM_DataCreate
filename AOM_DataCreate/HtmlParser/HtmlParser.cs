@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace AOM_DataCreate.HtmlParser {
     internal abstract class HtmlParser {
-        public static Regex TableBodyRegex = new Regex(@"<tbody>(.+?)</tbody>");
-        public static Regex TableLineRegex = new Regex(@"<tr>(.+?)</tr>");
-        public static Regex TagRegex = new Regex(@"<.+?>");
+        public static readonly Regex TableBodyRegex = new(@"<tbody>(.+?)</tbody>");
+        public static readonly Regex TableLineRegex = new(@"<tr>(.+?)</tr>");
+        public static readonly Regex TagRegex = new(@"<.+?>");
         public string? Source { get; set; }
         private Task<string?>? task;
 

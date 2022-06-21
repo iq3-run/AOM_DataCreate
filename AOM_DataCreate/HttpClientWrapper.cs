@@ -12,22 +12,21 @@ namespace AOM_DataCreate {
         }
 
         public static async Task<string?> GetPage(Uri uri) {
-            using(HttpClient client = new HttpClient(new HttpClientHandler {
+            using HttpClient client = new(new HttpClientHandler {
                 AllowAutoRedirect = true,
-            })) {
-                client.DefaultRequestHeaders.Add("User-Agent",
-                   "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko");
-                client.DefaultRequestHeaders.Add("Accept-Language", "ja-JP");
-                //client.Timeout = TimeSpan.FromSeconds(10.0);
-                try {
-                    return await client.GetStringAsync(uri);
-                } catch(Exception e) {
-                    Console.WriteLine("##########################");
-                    Console.WriteLine("例外発生:{0}", e);
-                    Console.WriteLine("##########################");
-                }
-                return null;
+            });
+            client.DefaultRequestHeaders.Add("User-Agent",
+               "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko");
+            client.DefaultRequestHeaders.Add("Accept-Language", "ja-JP");
+            //client.Timeout = TimeSpan.FromSeconds(10.0);
+            try {
+                return await client.GetStringAsync(uri);
+            } catch(Exception e) {
+                Console.WriteLine("##########################");
+                Console.WriteLine("例外発生:{0}", e);
+                Console.WriteLine("##########################");
             }
+            return null;
         }
     }
 }

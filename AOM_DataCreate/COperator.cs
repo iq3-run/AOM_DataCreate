@@ -58,8 +58,8 @@ namespace AOM_DataCreate {
         private List<CMaterialSet>[,] module = new List<CMaterialSet>[2, 3];
         public List<CMaterialSet>[,] Module { get { return module; } }
 
-        public bool isGlobal { get; set; }
-        public bool isParadox { get; set; }
+        public bool IsGlobal { get; set; }
+        public bool IsParadox { get; set; }
         public COperator? Parent { get; set; }
 
         public COperator() {
@@ -90,13 +90,13 @@ namespace AOM_DataCreate {
                 }
             }
             alternative = new List<COperator>();
-            isGlobal = true;
-            isParadox = true;
+            IsGlobal = true;
+            IsParadox = true;
         }
 
         public COperator CreateAlter() {
             if(Parent == null) {
-                COperator alter = new COperator();
+                COperator alter = new();
                 alternative.Add(alter);
                 alter.name = name;
                 alter.ID = ID;
@@ -159,8 +159,8 @@ namespace AOM_DataCreate {
                         if(module[i, j].Count == 0) module[i, j] = other.module[i, j];
                     }
                 }
-                if(isGlobal) isGlobal = other.isGlobal;
-                if(isParadox) isParadox = other.isParadox;
+                if(IsGlobal) IsGlobal = other.IsGlobal;
+                if(IsParadox) IsParadox = other.IsParadox;
                 return true;
             } else {
                 return false;
@@ -168,7 +168,7 @@ namespace AOM_DataCreate {
         }
 
         public string ExportOpeData() {
-            StringWriter sw = new StringWriter();
+            StringWriter sw = new();
             bool writeed = false;
             int step = 0;
             for(int i = 0; i < promotion.Length; i++) {
@@ -271,12 +271,43 @@ namespace AOM_DataCreate {
                     if(Name.Japanese.Length > 0 && Name.Japanese.Equals(other.Name.Japanese)) return true;
                     if(Name.English.Length > 0 && Name.English.Equals(other.Name.English)) return true;
                 }
+            }if(obj is string value) {
+                if(ID.Length > 0 && ID.Equals(value)) return true;
+                if(Name.Chinese.Length > 0 && Name.Chinese.Equals(value)) return true;
+                if(Name.Japanese.Length > 0 && Name.Japanese.Equals(value)) return true;
+                if(Name.English.Length > 0 && Name.English.Equals(value)) return true;
             }
             return false;
         }
 
         public override int GetHashCode() {
             return base.GetHashCode();
+        }
+
+        public enum Step {
+            昇進1,
+            昇進2,
+            SLv1to2,
+            SLv2to3,
+            SLv3to4,
+            SLv4to5,
+            SLv5to6,
+            SLv6to7,
+            S1特化1,
+            S1特化2,
+            S1特化3,
+            S2特化1,
+            S2特化2,
+            S2特化3,
+            S3特化1,
+            S3特化2,
+            S3特化3,
+            モジュールXLv1,
+            モジュールXLv2,
+            モジュールXLv3,
+            モジュールYLv1,
+            モジュールYLv2,
+            モジュールYLv3,
         }
     }
 }

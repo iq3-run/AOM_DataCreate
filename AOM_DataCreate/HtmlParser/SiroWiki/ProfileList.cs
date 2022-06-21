@@ -14,8 +14,8 @@ namespace AOM_DataCreate.HtmlParser.SiroWiki {
 
         public ProfileList(string source) : base(source) {
         }
-        public List<COperator> getOperators() {
-            List<COperator> operators = new List<COperator>();
+        public List<COperator> GetOperators() {
+            List<COperator> operators = new();
             if(Source == null) {
                 Wait();
                 if(Source == null) {
@@ -25,7 +25,7 @@ namespace AOM_DataCreate.HtmlParser.SiroWiki {
 
             foreach(Match match in TableBodyRegex.Matches(Source, Source.IndexOf("個人情報一覧"))) {
                 foreach(Match line in TableLineRegex.Matches(match.Value)) {
-                    COperator opr = new COperator();
+                    COperator opr = new();
                     string[] profile_data = line.Groups[1].Value.Split(@"</td>");
                     for(int i = 0; i < profile_data.Length; i++) {
                         profile_data[i] = TagRegex.Replace(profile_data[i], "").Trim();
@@ -50,8 +50,8 @@ namespace AOM_DataCreate.HtmlParser.SiroWiki {
             return operators;
         }
 
-        public void margeOperators(List<COperator> base_operators) {
-            List<COperator> add_operators = getOperators();
+        public void MargeOperators(List<COperator> base_operators) {
+            List<COperator> add_operators = GetOperators();
             foreach(COperator opr_base in base_operators) {
                 COperator? opr_add = add_operators.Find(oa => oa.Equals(opr_base));
                 if(opr_add != null) {

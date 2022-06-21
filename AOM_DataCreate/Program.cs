@@ -8,30 +8,30 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 
-PRTS.OperatorList prts_operator_parser = new PRTS.OperatorList();
+PRTS.OperatorList prts_operator_parser = new();
 
-List<COperator> operator_list = new List<COperator>();
+List<COperator> operator_list = new();
 
-Dictionary<string, int> material_dic = new Dictionary<string, int>();
-Dictionary<string, int> place_dic = new Dictionary<string, int>();
-Dictionary<string, int> race_dic = new Dictionary<string, int>();
-Dictionary<string, int> class_dic = new Dictionary<string, int>();
-Dictionary<int, Dictionary<string, int>> sub_class_dic = new Dictionary<int, Dictionary<string, int>>();
+Dictionary<string, int> material_dic = new();
+Dictionary<string, int> place_dic = new();
+Dictionary<string, int> race_dic = new();
+Dictionary<string, int> class_dic = new();
+Dictionary<int, Dictionary<string, int>> sub_class_dic = new();
 
 if(args.Length < 1) return;
 Directory.SetCurrentDirectory(args[0]);
-using(StreamReader sr = new StreamReader(@"lang.csv")) {
+using(StreamReader sr = new(@"lang.csv")) {
     string? line;
     string mode = "";
     while((line = sr.ReadLine()) != null) {
         string[] lang = line.Split("\t");
         if(lang[0].StartsWith("[")) {
-            mode = lang[0].Substring(1, lang[0].Length - 2);
+            mode = lang[0][1..^1];
             continue;
         }
         if(mode.Equals("Operator")) continue;
         int id = int.Parse(lang[0]);
-        CNameSet name = new CNameSet(lang[1], lang[2], lang[3]);
+        CNameSet name = new(lang[1], lang[2], lang[3]);
         switch(mode) {
             case "Class":
                 class_dic.TryAdd(lang[1], id);
@@ -75,25 +75,25 @@ using(StreamReader sr = new StreamReader(@"lang.csv")) {
 }
 
 
-PRTS.ParadoxList paradox_list_parser = new PRTS.ParadoxList();
+PRTS.ParadoxList paradox_list_parser = new();
 
-List<COperator> prts_charas = prts_operator_parser.getOperators();
+List<COperator> prts_charas = prts_operator_parser.GetOperators();
 List<string> paradox_list = paradox_list_parser.Parse();
 
-KuroWiki.OperatorList kuro_ope_list_parser = new KuroWiki.OperatorList();
-operator_list = kuro_ope_list_parser.margeOperator(prts_charas, material_dic, paradox_list);
+KuroWiki.OperatorList kuro_ope_list_parser = new();
+operator_list = kuro_ope_list_parser.MargeOperator(prts_charas, material_dic, paradox_list);
 
 SiroWiki.ProfileList profileList = new();
-profileList.margeOperators(operator_list);
+profileList.MargeOperators(operator_list);
 
-Regex split_mark_regex = new Regex(@"\W+");
+Regex split_mark_regex = new(@"\W+");
 
 operator_list.Sort((a, b) => b.Rarity.CompareTo(a.Rarity));
-StreamReader lang_read = new StreamReader(@"lang.csv");
-StreamWriter lang_write = new StreamWriter(@"lang_new.csv");
-StreamWriter opeinfodata_write = new StreamWriter(@"opeinfodata_new.csv");
-StreamWriter opedata_write = new StreamWriter(@"opedata_new.csv");
-List<string> output_operator_list = new List<string>();
+StreamReader lang_read = new(@"lang.csv");
+StreamWriter lang_write = new(@"lang_new.csv");
+StreamWriter opeinfodata_write = new(@"opeinfodata_new.csv");
+StreamWriter opedata_write = new(@"opedata_new.csv");
+List<string> output_operator_list = new();
 int before_rarity = 6;
 try {
     opeinfodata_write.WriteLine("Code\tRarity\tClass\tByUse\tRace\tPlace\tAlready\tParadox\tAlternate");
@@ -132,9 +132,8 @@ try {
         lang_write.WriteLine("{0}\t{1}\t{2}\t{3}", opr.ID, opr.Name.Japanese, opr.Name.English, opr.Name.Chinese);
         int class_id = class_dic[opr.Class.Japanese];
         int sub_class_id = sub_class_dic[class_id][opr.SubClass.Japanese];
-        int race_id = 99;
         bool exist_race_id = false;
-        if(race_dic.TryGetValue(opr.Race.Japanese, out race_id)) {
+        if(race_dic.TryGetValue(opr.Race.Japanese, out int race_id)) {
             exist_race_id = true;
         } else {
             string[] race = split_mark_regex.Split(opr.Race.Japanese);
@@ -149,9 +148,8 @@ try {
             Console.WriteLine("{0} 種族：{1}", opr.Name.Japanese, opr.Race.Japanese);
             race_id = 99;
         }
-        int place_id = 99;
         bool exist_place_id = false;
-        if(place_dic.TryGetValue(opr.Birthplace.Japanese, out place_id)) {
+        if(place_dic.TryGetValue(opr.Birthplace.Japanese, out int place_id)) {
             exist_place_id = true;
         } else {
             string[] place = split_mark_regex.Split(opr.Birthplace.Japanese);
@@ -166,13 +164,13 @@ try {
             Console.WriteLine("{0} 出身：{1}", opr.Name.Japanese, opr.Birthplace.Japanese);
             place_id = 99;
         }
-        opeinfodata_write.WriteLine("{0}\t☆{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}", opr.ID, opr.Rarity, class_id, sub_class_id, race_id, place_id, opr.isGlobal ? 1 : 0, opr.isParadox ? 1 : 0, 0);
+        opeinfodata_write.WriteLine("{0}\t☆{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}", opr.ID, opr.Rarity, class_id, sub_class_id, race_id, place_id, opr.IsGlobal ? 1 : 0, opr.IsParadox ? 1 : 0, 0);
         opedata_write.Write(opr.ExportOpeData());
         foreach(COperator alter in opr.Alternative) {
             class_id = class_dic[alter.Class.Japanese];
             sub_class_id = sub_class_dic[class_id][alter.SubClass.Japanese];
             lang_write.WriteLine("{0}\t{1}\t{2}\t{3}", alter.ID, alter.Name.Japanese, alter.Name.English, alter.Name.Chinese);
-            opeinfodata_write.WriteLine("{0}\t☆{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}", alter.ID, opr.Rarity, class_id, sub_class_id, race_id, place_id, opr.isGlobal ? 1 : 0, opr.isParadox ? 1 : 0, 1);
+            opeinfodata_write.WriteLine("{0}\t☆{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}", alter.ID, opr.Rarity, class_id, sub_class_id, race_id, place_id, opr.IsGlobal ? 1 : 0, opr.IsParadox ? 1 : 0, 1);
             opedata_write.Write(alter.ExportOpeData());
         }
     }
