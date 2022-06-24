@@ -4,11 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace AOM_DataCreate.HtmlParser.PRTS {
     internal class OperatorList : HtmlParser {
         const string URL = @"https://prts.wiki/w/%E5%B9%B2%E5%91%98%E4%B8%80%E8%A7%88";
-        
+
         static readonly Regex prts_list_regex = new(@"<div\s+(.*?class=""smwdata"".*?)>.*?</div>");
         static readonly Regex param_regex = new(@"([-\w]+)=""(.*?)""");
 
@@ -17,19 +18,15 @@ namespace AOM_DataCreate.HtmlParser.PRTS {
 
         public OperatorList(string source) : base(source) {
         }
-        public List<COperator> GetOperators() {
+        public List<COperator> GetOperators(Dictionary<int, CNameSet> material_dic) {
             List<COperator> operators = new();
-            if(Source == null) {
-                Wait();
-                if(Source == null) {
-                    throw new NullReferenceException("ソースの取得に失敗しました");
-                }
-            }
+            GetSource(5);
+            if(Source == null) return operators;
 
             foreach(Match match in prts_list_regex.Matches(Source)) {
                 COperator @operator = new();
                 foreach(Match param in param_regex.Matches(match.Groups[1].Value)) {
-                    string value = param.Groups[2].Value;
+                    string value = HttpUtility.HtmlDecode(param.Groups[2].Value);
                     switch(param.Groups[1].Value) {
                         case "data-cn":
                             @operator.Name.Chinese = value;
@@ -40,7 +37,7 @@ namespace AOM_DataCreate.HtmlParser.PRTS {
                         case "data-jp":
                             @operator.Name.Japanese = value;
                             if(value.Length == 0) @operator.IsGlobal = false;
-                            else  @operator.IsGlobal = true;
+                            else @operator.IsGlobal = true;
                             break;
                         case "data-race":
                             @operator.Race.Chinese = value;
@@ -67,10 +64,16 @@ namespace AOM_DataCreate.HtmlParser.PRTS {
                             break;
                     }
                 }
+                Console.WriteLine("{0}", @operator.Name);
                 Operator operator_parser = new(new Uri(System.Web.HttpUtility.UrlPathEncode(@"https://prts.wiki/w/" + @operator.Name.Chinese)));
-                COperator? opr = operator_parser.Parse();
-                if(opr != null) @operator.TryMerge(opr);
-                operators.Add(@operator);
+                operator_parser.Parse(@operator, material_dic);
+                COperator? alter = operators.Find(o => o.Equals(@operator));
+                if(alter == null) {
+                    operators.Add(@operator);
+                } else {
+                    alter.AddAlter(@operator);
+                    operators.Add(alter);
+                }
             }
 
             return operators;

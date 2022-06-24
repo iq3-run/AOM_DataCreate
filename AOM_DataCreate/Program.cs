@@ -8,11 +8,11 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 
-PRTS.OperatorList prts_operator_parser = new();
 
 List<COperator> operator_list = new();
 
 Dictionary<string, int> material_dic = new();
+Dictionary<int, CNameSet> material_dic2 = new();
 Dictionary<string, int> place_dic = new();
 Dictionary<string, int> race_dic = new();
 Dictionary<string, int> class_dic = new();
@@ -34,28 +34,29 @@ using(StreamReader sr = new(@"lang.csv")) {
         CNameSet name = new(lang[1], lang[2], lang[3]);
         switch(mode) {
             case "Class":
-                class_dic.TryAdd(lang[1], id);
-                class_dic.TryAdd(lang[2], id);
-                class_dic.TryAdd(lang[3], id);
+                class_dic[lang[1]] = id;
+                class_dic[lang[2]] = id;
+                class_dic[lang[3]] = id;
                 break;
             case "Race":
-                race_dic.TryAdd(lang[1], id);
-                race_dic.TryAdd(lang[2], id);
-                race_dic.TryAdd(lang[3], id);
+                race_dic[lang[1]] = id;
+                race_dic[lang[2]] = id;
+                race_dic[lang[3]] = id;
                 break;
             case "Place":
-                place_dic.TryAdd(lang[1], id);
-                place_dic.TryAdd(lang[2], id);
-                place_dic.TryAdd(lang[3], id);
+                place_dic[lang[1]] = id;
+                place_dic[lang[2]] = id;
+                place_dic[lang[3]] = id;
                 string[] bp = lang[1].Split("/");
                 foreach(var item in bp) {
-                    place_dic.TryAdd(item, id);
+                    place_dic[item] = id;
                 }
                 break;
             case "Material":
-                material_dic.TryAdd(lang[1], id);
-                material_dic.TryAdd(lang[2], id);
-                material_dic.TryAdd(lang[3], id);
+                material_dic[lang[1]] = id;
+                material_dic[lang[2]] = id;
+                material_dic[lang[3]] = id;
+                material_dic2[id] = name;
                 break;
             case "System":
                 break;
@@ -66,23 +67,26 @@ using(StreamReader sr = new(@"lang.csv")) {
                 if(!sub_class_dic.ContainsKey(class_id)) {
                     sub_class_dic.Add(class_id, new Dictionary<string, int>());
                 }
-                sub_class_dic[class_id].TryAdd(lang[1], id);
-                sub_class_dic[class_id].TryAdd(lang[2], id);
-                sub_class_dic[class_id].TryAdd(lang[3], id);
+                sub_class_dic[class_id][lang[1]] = id;
+                sub_class_dic[class_id][lang[2]] = id;
+                sub_class_dic[class_id][lang[3]] = id;
                 break;
         }
     }
 }
 
-
+Console.WriteLine("PRTS");
+PRTS.OperatorList prts_operator_parser = new();
 PRTS.ParadoxList paradox_list_parser = new();
 
-List<COperator> prts_charas = prts_operator_parser.GetOperators();
+List<COperator> prts_charas = prts_operator_parser.GetOperators(material_dic2);
 List<string> paradox_list = paradox_list_parser.Parse();
 
+Console.WriteLine("黒Wiki");
 KuroWiki.OperatorList kuro_ope_list_parser = new();
-operator_list = kuro_ope_list_parser.MargeOperator(prts_charas, material_dic, paradox_list);
+operator_list = kuro_ope_list_parser.MargeOperator(prts_charas, material_dic2, paradox_list);
 
+Console.WriteLine("白Wiki");
 SiroWiki.ProfileList profileList = new();
 profileList.MargeOperators(operator_list);
 

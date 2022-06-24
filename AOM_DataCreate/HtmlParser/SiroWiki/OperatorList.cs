@@ -20,15 +20,11 @@ namespace AOM_DataCreate.HtmlParser.SiroWiki {
 
         public List<COperator> GetOperators() {
             List<COperator> operators = new();
-            if(Source == null) {
-                Wait();
-                if(Source == null) {
-                    throw new NullReferenceException("ソースの取得に失敗しました");
-                }
-            }
+            GetSource(5);
+            if(Source == null) return operators;
 
             foreach(Match match in sirowiki_list_regex.Matches(Source, Source.IndexOf("募集タグ"))) {
-                Console.WriteLine(match.Groups[2].Value);
+                //Console.WriteLine(match.Groups[2].Value);
                 Operator operator_parser = new(new Uri(match.Groups[1].Value.Trim()));
                 COperator? opr = operator_parser.Parse();
                 if(opr == null) continue;

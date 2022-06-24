@@ -10,22 +10,17 @@ namespace AOM_DataCreate.HtmlParser.KuroWiki {
     internal class Operator : HtmlParser {
         static readonly Regex kurowiki_chara_name_regex = new(@"(.+?)\s*(?:\(|（)(.+)(?:\)|）)\s*\[(.+)\]");
         static readonly Regex sub_class_regex = new(@"\[(.+)\](?:\s|&\w+;)*(.+)");
-        static readonly Regex material_regex = new(@"(.+?)\s*(?:x|×)\s*(\d+)");
+        static readonly Regex material_regex = new(@"(.+?)\s*(?:x|×)\s*([\d,]+)");
 
         public Operator(string source) : base(source) {
         }
         public Operator(Uri url) : base(url) {
         }
 
-        public COperator? Parse(Dictionary<string, int> material_dic, List<string> paradox_list) {
+        public COperator? Parse(Dictionary<int, CNameSet> material_dic, List<string> paradox_list) {
             COperator opr = new();
-            if(Source == null) {
-                Wait();
-                if(Source == null) {
-                    throw new NullReferenceException("ソースの取得に失敗しました");
-                }
-            }
-
+            GetSource(5);
+            if(Source == null) return null;
             string kurowiki_chara_str2 = HttpUtility.HtmlDecode(HtmlParser.TagRegex.Replace(Source, ""));
             StringReader sr = new(kurowiki_chara_str2);
 
@@ -33,6 +28,7 @@ namespace AOM_DataCreate.HtmlParser.KuroWiki {
             string data_pos = "";
             int skl_kind = -1;
             int mod_kind = -1;
+            int level = -1;
             bool into_mod = false;
             string? line;
 
@@ -67,26 +63,53 @@ namespace AOM_DataCreate.HtmlParser.KuroWiki {
                     } else if(opr.Birthplace.Japanese.Length == 0 && line.Equals("出身")) opr.Birthplace.Japanese = (sr.ReadLine() ?? "").Trim();
                     else if(opr.Race.Japanese.Length == 0 && line.Equals("種族")) opr.Race.Japanese = (sr.ReadLine() ?? "").Trim();
                     else if(opr.Camp.Japanese.Length == 0 && line.Equals("陣営")) opr.Camp.Japanese = (sr.ReadLine() ?? "").Trim();
-                    else if(line.Replace(" ", "").Equals("昇進1")) data_pos = "昇進1";
-                    else if(line.Replace(" ", "").Equals("昇進2")) data_pos = "昇進2";
-                    else if(line.Equals("1→2")) data_pos = "1to2";
-                    else if(line.Equals("2→3")) data_pos = "2to3";
-                    else if(line.Equals("3→4")) data_pos = "3to4";
-                    else if(line.Equals("4→5")) data_pos = "4to5";
-                    else if(line.Equals("5→6")) data_pos = "5to6";
-                    else if(line.Equals("6→7")) data_pos = "6to7";
-                    else if(line.Equals("7→8")) {
-                        data_pos = "7to8";
+                    else if(line.Replace(" ", "").Equals("昇進1")) {
+                        data_pos = "昇進";
+                        level = 0;
+                    } else if(line.Replace(" ", "").Equals("昇進2")) {
+                        data_pos = "昇進";
+                        level = 1;
+                    } else if(line.Equals("1→2")) {
+                        data_pos = "スキル";
+                        level = 0;
+                    } else if(line.Equals("2→3")) {
+                        data_pos = "スキル";
+                        level = 1;
+                    } else if(line.Equals("3→4")) {
+                        data_pos = "スキル";
+                        level = 2;
+                    } else if(line.Equals("4→5")) {
+                        data_pos = "スキル";
+                        level = 3;
+                    } else if(line.Equals("5→6")) {
+                        data_pos = "スキル";
+                        level = 4;
+                    } else if(line.Equals("6→7")) {
+                        data_pos = "スキル";
+                        level = 5;
+                    } else if(line.Equals("7→8")) {
+                        data_pos = "特化";
                         skl_kind++;
-                    } else if(line.Equals("8→9")) data_pos = "8to9";
-                    else if(line.Equals("9→10")) data_pos = "9to10";
-                    else if(line.Equals("モジュール強化")) into_mod = true;
+                        level = 0;
+                    } else if(line.Equals("8→9")) {
+                        data_pos = "特化";
+                        level = 1;
+                    } else if(line.Equals("9→10")) {
+                        data_pos = "特化";
+                        level = 2;
+                    } else if(line.Equals("モジュール強化")) into_mod = true;
                     else if(into_mod && line.Contains("-X")) mod_kind = 0;
                     else if(into_mod && line.Contains("-Y")) mod_kind = 1;
-                    else if(into_mod && line.Equals("Lv1")) data_pos = "modLv1";
-                    else if(into_mod && line.Equals("Lv2")) data_pos = "modLv2";
-                    else if(into_mod && line.Equals("Lv3")) data_pos = "modLv3";
-                    else if(line.Equals("中国wiki攻略ページ")) {
+                    else if(into_mod && line.Equals("Lv1")) {
+                        data_pos = "モジュール";
+                        level = 0;
+                    } else if(into_mod && line.Equals("Lv2")) {
+                        data_pos = "モジュール";
+                        level = 1;
+                    } else if(into_mod && line.Equals("Lv3")) {
+                        data_pos = "モジュール";
+                        level = 2;
+                    } else if(line.Equals("中国wiki攻略ページ")) {
                         //string? prts_chara_url = sr.ReadLine();
                         //if(prts_chara_url != null) {
                         //    string[] u = prts_chara_url.Split('/');
@@ -111,54 +134,27 @@ namespace AOM_DataCreate.HtmlParser.KuroWiki {
                             string material_name = m.Groups[1].Value.Trim().Replace(" ", "").Replace("III", "3").Replace("II", "2").Replace("I", "1");
                             material_name = material_name.Replace("Ⅰ", "1").Replace("Ⅱ", "2").Replace("Ⅲ", "3");
                             int material_qty = int.Parse(m.Groups[2].Value.Trim());
-                            if(material_dic.ContainsKey(material_name)) {
-                                int material_id = material_dic[material_name];
+                            try {
+                                var material = material_dic.First(m => m.Value.Equals(material_name));
+                                CMaterialSet material_set = new(material, material_qty);
                                 switch(data_pos) {
-                                    case "昇進1":
-                                        opr.Promotion[0].Add(new CMaterialSet(material_id, material_name, material_qty));
+                                    case "昇進":
+                                        opr.Promotion[level].Add(material_set);
                                         break;
-                                    case "昇進2":
-                                        opr.Promotion[1].Add(new CMaterialSet(material_id, material_name, material_qty));
+                                    case "スキル":
+                                        opr.Skill[level].Add(material_set);
                                         break;
-                                    case "1to2":
-                                        opr.Skill[0].Add(new CMaterialSet(material_id, material_name, material_qty));
+                                    case "特化":
+                                        opr.SkillSP[skl_kind, level].Add(material_set);
                                         break;
-                                    case "2to3":
-                                        opr.Skill[1].Add(new CMaterialSet(material_id, material_name, material_qty));
-                                        break;
-                                    case "3to4":
-                                        opr.Skill[2].Add(new CMaterialSet(material_id, material_name, material_qty));
-                                        break;
-                                    case "4to5":
-                                        opr.Skill[3].Add(new CMaterialSet(material_id, material_name, material_qty));
-                                        break;
-                                    case "5to6":
-                                        opr.Skill[4].Add(new CMaterialSet(material_id, material_name, material_qty));
-                                        break;
-                                    case "6to7":
-                                        opr.Skill[5].Add(new CMaterialSet(material_id, material_name, material_qty));
-                                        break;
-                                    case "7to8":
-                                        opr.SkillSP[skl_kind, 0].Add(new CMaterialSet(material_id, material_name, material_qty));
-                                        break;
-                                    case "8to9":
-                                        opr.SkillSP[skl_kind, 1].Add(new CMaterialSet(material_id, material_name, material_qty));
-                                        break;
-                                    case "9to10":
-                                        opr.SkillSP[skl_kind, 2].Add(new CMaterialSet(material_id, material_name, material_qty));
-                                        break;
-                                    case "modLv1":
-                                        opr.Module[mod_kind, 0].Add(new CMaterialSet(material_id, material_name, material_qty));
-                                        break;
-                                    case "modLv2":
-                                        opr.Module[mod_kind, 1].Add(new CMaterialSet(material_id, material_name, material_qty));
-                                        break;
-                                    case "modLv3":
-                                        opr.Module[mod_kind, 2].Add(new CMaterialSet(material_id, material_name, material_qty));
+                                    case "モジュール":
+                                        opr.Module[mod_kind, level].Add(material_set);
                                         break;
                                     default:
                                         break;
                                 }
+                            } catch {
+                                continue;
                             }
                         }
                     }

@@ -16,12 +16,8 @@ namespace AOM_DataCreate.HtmlParser.SiroWiki {
         }
         public List<COperator> GetOperators() {
             List<COperator> operators = new();
-            if(Source == null) {
-                Wait();
-                if(Source == null) {
-                    throw new NullReferenceException("ソースの取得に失敗しました");
-                }
-            }
+            GetSource(5);
+            if(Source == null) return operators;
 
             foreach(Match match in TableBodyRegex.Matches(Source, Source.IndexOf("個人情報一覧"))) {
                 foreach(Match line in TableLineRegex.Matches(match.Value)) {
@@ -30,7 +26,7 @@ namespace AOM_DataCreate.HtmlParser.SiroWiki {
                     for(int i = 0; i < profile_data.Length; i++) {
                         profile_data[i] = TagRegex.Replace(profile_data[i], "").Trim();
                     }
-                    Console.WriteLine(profile_data[1]);
+                    //Console.WriteLine(profile_data[1]);
                     if(profile_data.Length == 21) {
                         opr.ID = profile_data[(int)ProfileColumn.図鑑コード];
                         opr.Name.Japanese = profile_data[(int)ProfileColumn.コードネーム];

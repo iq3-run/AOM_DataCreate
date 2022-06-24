@@ -17,12 +17,9 @@ namespace AOM_DataCreate.HtmlParser.PRTS {
 
         public List<string> Parse() {
             List<string> list = new();
-            if(Source == null) {
-                Wait();
-                if(Source == null) {
-                    throw new NullReferenceException("ソースの取得に失敗しました");
-                }
-            }
+            GetSource(5);
+            if(Source == null) return list;
+
             foreach(Match match in prts_paradox_regex.Matches(Source)) {
                 list.Add(match.Groups[1].Value.Trim());
             }

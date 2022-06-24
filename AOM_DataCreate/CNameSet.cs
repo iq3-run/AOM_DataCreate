@@ -32,5 +32,26 @@ namespace AOM_DataCreate
         public override string ToString() {
             return Japanese + "\t" + English + "\t" + Chinese;
         }
+
+        public override bool Equals(object? obj) {
+            if(obj == null) return false;
+            if(ReferenceEquals(this, obj)) return true;
+            if(obj is CNameSet other) {
+                if(other.Chinese.Equals(Chinese)) return true;
+                if(other.Japanese.Equals(Japanese)) return true;
+                if(other.English.Equals(English)) return true;
+            }
+            if(obj is string str) {
+                if(Chinese.Equals(str)) return true;
+                if(Japanese.Equals(str)) return true;
+                if(English.Equals(str)) return true;
+            }
+
+            return base.Equals(obj);
+        }
+
+        public override int GetHashCode() {
+            return base.GetHashCode();
+        }
     }
 }

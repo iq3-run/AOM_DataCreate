@@ -18,15 +18,10 @@ namespace AOM_DataCreate.HtmlParser.KuroWiki {
         public OperatorList(string source) : base(source) {
         }
 
-        public List<COperator> GetOperators(Dictionary<string, int> material_dic, List<string> paradox_list) {
+        public List<COperator> GetOperators(Dictionary<int, CNameSet> material_dic, List<string> paradox_list) {
             List<COperator> operators = new();
-            if(Source == null) {
-                Wait();
-                if(Source == null) {
-                    throw new NullReferenceException("ソースの取得に失敗しました");
-                }
-            }
-
+            GetSource(5);
+            if(Source == null) return operators;
 
             foreach(Match match in kurowiki_list_regex.Matches(HttpUtility.HtmlDecode(Source))) {
                 Console.WriteLine(match.Groups[3].Value);
@@ -38,7 +33,7 @@ namespace AOM_DataCreate.HtmlParser.KuroWiki {
             return operators;
         }
 
-        public List<COperator> MargeOperator(List<COperator> base_operators, Dictionary<string, int> material_dic, List<string> paradox_list) {
+        public List<COperator> MargeOperator(List<COperator> base_operators, Dictionary<int, CNameSet> material_dic, List<string> paradox_list) {
             List<COperator> add_operators = GetOperators(material_dic, paradox_list);
             List<COperator> new_list = new();
             foreach(var opr_add in add_operators) {

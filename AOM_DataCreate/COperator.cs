@@ -43,19 +43,42 @@ namespace AOM_DataCreate {
         public CNameSet Camp { get; set; }
         public CNameSet Race { get; set; }
 
-        private List<COperator> alternative;
+        private readonly List<COperator> alternative;
         public List<COperator> Alternative { get { return alternative; } }
 
-        private List<CMaterialSet>[] promotion = new List<CMaterialSet>[2];
+        public List<CMaterialSet>[] Materials {
+            get {
+                List<List<CMaterialSet>> m = new();
+                for(int i = 0; i < promotion.Length; i++) {
+                    m.Add( promotion[i]);
+                }
+                for(int i = 0; i < skill.Length; i++) {
+                    m.Add(skill[i]);
+                }
+                for(int i = 0; i < skill_sp.GetLength(0); i++) {
+                    for(int j = 0; j < skill_sp.GetLength(1); j++) {
+                        m.Add(skill_sp[i, j]);
+                    }
+                }
+                for(int i = 0; i < module.GetLength(0); i++) {
+                    for(int j = 0; j < module.GetLength(1); j++) {
+                        m.Add( module[i, j]);
+                    }
+                }
+                return m.ToArray();
+            }
+        }
+
+        private readonly List<CMaterialSet>[] promotion = new List<CMaterialSet>[2];
         public List<CMaterialSet>[] Promotion { get { return promotion; } }
 
-        private List<CMaterialSet>[] skill = new List<CMaterialSet>[6];
+        private readonly List<CMaterialSet>[] skill = new List<CMaterialSet>[6];
         public List<CMaterialSet>[] Skill { get { return skill; } }
 
-        private List<CMaterialSet>[,] skill_sp = new List<CMaterialSet>[3, 3];
+        private readonly List<CMaterialSet>[,] skill_sp = new List<CMaterialSet>[3, 3];
         public List<CMaterialSet>[,] SkillSP { get { return skill_sp; } }
 
-        private List<CMaterialSet>[,] module = new List<CMaterialSet>[2, 3];
+        private readonly List<CMaterialSet>[,] module = new List<CMaterialSet>[2, 3];
         public List<CMaterialSet>[,] Module { get { return module; } }
 
         public bool IsGlobal { get; set; }
@@ -112,6 +135,19 @@ namespace AOM_DataCreate {
             }
         }
 
+        public void AddAlter(COperator alter) {
+            if(Parent == null) {
+                alternative.Add(alter);
+                alter.Parent = this;
+                foreach(var item in alter.Alternative) {
+                    this.AddAlter(item);
+                }
+                alter.alternative.Clear();
+            } else {
+                Parent.AddAlter(alter);
+            }
+        }
+
         public bool TryMerge(COperator other) {
             if(this.Equals(other)) {
                 if(ID.Length == 0) ID = other.ID;
@@ -138,27 +174,36 @@ namespace AOM_DataCreate {
                 if(Race.English.Length == 0) Race.English = other.Race.English;
                 if(Race.Chinese.Length == 0) Race.Chinese = other.Race.Chinese;
                 if(alternative.Count == 0) {
-                    alternative = other.alternative;
+                    alternative.AddRange(other.alternative);
                     foreach(var item in alternative) {
                         item.Parent = this;
                     }
-                }
-                for(int i = 0; i < promotion.Length; i++) {
-                    if(promotion[i].Count == 0) promotion[i] = other.promotion[i];
-                }
-                for(int i = 0; i < skill.Length; i++) {
-                    if(skill[i].Count == 0) skill[i] = other.skill[i];
-                }
-                for(int i = 0; i < skill_sp.GetLength(0); i++) {
-                    for(int j = 0; j < skill_sp.GetLength(1); j++) {
-                        if(skill_sp[i, j].Count == 0) skill_sp[i, j] = other.skill_sp[i, j];
+                } else {
+                    for(int i = 0; i < alternative.Count && i < other.alternative.Count; i++) {
+                        alternative[i].TryMerge(other.alternative[i]);
                     }
                 }
-                for(int i = 0; i < module.GetLength(0); i++) {
-                    for(int j = 0; j < module.GetLength(1); j++) {
-                        if(module[i, j].Count == 0) module[i, j] = other.module[i, j];
+
+                for(int i = 0; i < Materials.Length; i++) {
+                    if(Materials[i].Count == 0) Materials[i].AddRange(other.Materials[i]);
+                    else {
+                        foreach(var material_f in Materials[i]) {
+                            if(material_f.Name.Equals("龍門幣")) continue;
+                            CMaterialSet? material_t = other.Materials[i].Find(m => m.ID == material_f.ID);
+                            if(material_t == null) {
+                                Console.WriteLine("<{0} {1}-{2}: {3}", ID, Name.Japanese, (Step)i, material_f.Name.Japanese);
+                                continue;
+                            }
+                            if(material_f.Quantity != material_t.Quantity) {
+                                Console.WriteLine("!{0} {1}-{2}: {3} x{4} <> x{5}", ID, Name.Japanese, (Step)i, material_f.Name.Japanese, material_f.Quantity, material_t.Quantity);
+                            }
+                        }
+                        foreach(var material_t in other.Materials[i].FindAll(mt => !Materials[i].Exists(mf => mt.ID == mf.ID))) {
+                            Console.WriteLine(">{0} {1}-{2}: {3}", ID, Name.Japanese, (Step)i, material_t.Name.Japanese);
+                        }
                     }
                 }
+
                 if(IsGlobal) IsGlobal = other.IsGlobal;
                 if(IsParadox) IsParadox = other.IsParadox;
                 return true;
@@ -167,15 +212,17 @@ namespace AOM_DataCreate {
             }
         }
 
+
         public string ExportOpeData() {
             StringWriter sw = new();
             bool writeed = false;
             int step = 0;
-            for(int i = 0; i < promotion.Length; i++) {
-                if(promotion[i].Count > 0) {
+            for(int i = 0; i < Materials.Length; i++) {
+                if(Materials[i].Count > 0) {
+                    if(i == (int)Step.SLv1to2 && !writeed) sw.WriteLine("{0}\t0\t\t\t\t\t\t", ID);
                     sw.Write("{0}\t{1}", ID, step);
                     int k = 0;
-                    foreach(var item in promotion[i]) {
+                    foreach(var item in Materials[i]) {
                         if(!item.Name.Equals("龍門幣")) {
                             sw.Write("\t{0}\t{1}", item.ID, item.Quantity);
                             k++;
@@ -188,65 +235,6 @@ namespace AOM_DataCreate {
                     writeed = true;
                 }
                 step++;
-            }
-            for(int i = 0; i < skill.Length; i++) {
-                if(skill[i].Count > 0) {
-                    if(!writeed) sw.WriteLine("{0}\t0\t\t\t\t\t\t", ID);
-                    sw.Write("{0}\t{1}", ID, step);
-                    int k = 0;
-                    foreach(var item in skill[i]) {
-                        if(!item.Name.Equals("龍門幣")) {
-                            sw.Write("\t{0}\t{1}", item.ID, item.Quantity);
-                            k++;
-                        }
-                    }
-                    for(; k < 3; k++) {
-                        sw.Write("\t\t");
-                    }
-                    sw.WriteLine();
-                    writeed = true;
-                }
-                step++;
-            }
-            for(int i = 0; i < skill_sp.GetLength(0); i++) {
-                for(int j = 0; j < skill_sp.GetLength(1); j++) {
-                    if(skill_sp[i, j].Count > 0) {
-                        sw.Write("{0}\t{1}", ID, step);
-                        int k = 0;
-                        foreach(var item in skill_sp[i, j]) {
-                            if(!item.Name.Equals("龍門幣")) {
-                                sw.Write("\t{0}\t{1}", item.ID, item.Quantity);
-                                k++;
-                            }
-                        }
-                        for(; k < 3; k++) {
-                            sw.Write("\t\t");
-                        }
-                        sw.WriteLine();
-                        writeed = true;
-                    }
-                    step++;
-                }
-            }
-            for(int i = 0; i < module.GetLength(0); i++) {
-                for(int j = 0; j < module.GetLength(1); j++) {
-                    if(module[i, j].Count > 0) {
-                        sw.Write("{0}\t{1}", ID, step);
-                        int k = 0;
-                        foreach(var item in module[i, j]) {
-                            if(!item.Name.Equals("龍門幣")) {
-                                sw.Write("\t{0}\t{1}", item.ID, item.Quantity);
-                                k++;
-                            }
-                        }
-                        for(; k < 3; k++) {
-                            sw.Write("\t\t");
-                        }
-                        sw.WriteLine();
-                        writeed = true;
-                    }
-                    step++;
-                }
             }
             if(!writeed) sw.WriteLine("{0}\t-\t\t\t\t\t\t", ID);
             return sw.ToString();
@@ -261,9 +249,8 @@ namespace AOM_DataCreate {
         }
 
         public override bool Equals(object? obj) {
-            if (obj == null) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
+            if(obj == null) return false;
+            if(ReferenceEquals(this, obj)) return true;
             if(obj is COperator other) {
                 if(ID.Length > 0 && ID.Equals(other.ID)) return true;
                 if(ID.Length == 0 || other.ID.Length == 0) {
@@ -271,7 +258,8 @@ namespace AOM_DataCreate {
                     if(Name.Japanese.Length > 0 && Name.Japanese.Equals(other.Name.Japanese)) return true;
                     if(Name.English.Length > 0 && Name.English.Equals(other.Name.English)) return true;
                 }
-            }if(obj is string value) {
+            }
+            if(obj is string value) {
                 if(ID.Length > 0 && ID.Equals(value)) return true;
                 if(Name.Chinese.Length > 0 && Name.Chinese.Equals(value)) return true;
                 if(Name.Japanese.Length > 0 && Name.Japanese.Equals(value)) return true;
