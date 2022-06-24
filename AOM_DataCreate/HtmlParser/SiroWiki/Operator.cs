@@ -8,9 +8,11 @@ using System.Web;
 
 namespace AOM_DataCreate.HtmlParser.SiroWiki {
     internal class Operator : HtmlParser {
-        static readonly Regex sirowiki_chinese_name_regex = new(@"<p>中国語名(?:：|:)(.+?)[　\s]");
-        static readonly Regex sirowiki_profile_regex = new(@"<table[^>]*?><tbody>(.+?プロフィール.+?)(?:</tbody></table>|$)", RegexOptions.Singleline);
-        static readonly Regex p_material_regex = new (@"(.+)x(\d+)");
+        static readonly Regex chinese_name_regex = new(@"<p>中国語名(?:：|:)(.+?)[　\s]");
+        static readonly Regex english_name_regex = new(@"英語名(?:：|:)(.+?)[　\s]");
+        static readonly Regex russian_name_regex = new(@"ロシア語名(?:：|:)(.+?)[　\s]");
+        static readonly Regex profile_regex = new(@"<table[^>]*?><tbody>(.+?プロフィール.+?)(?:</tbody></table>|$)", RegexOptions.Singleline);
+        static readonly Regex p_material_regex = new(@"(.+)x(\d+)");
         public Operator(string source) : base(source) {
         }
         public Operator(Uri url) : base(url) {
@@ -21,13 +23,16 @@ namespace AOM_DataCreate.HtmlParser.SiroWiki {
             GetSource(5);
             if(Source == null) return null;
 
-            Match chinese_name_match = sirowiki_chinese_name_regex.Match(Source);
+            Match chinese_name_match = chinese_name_regex.Match(Source);
             if(!chinese_name_match.Success) {
                 return null;
             }
-            string chinese_name = chinese_name_match.Groups[1].Value.Trim();
-            opr.Name.Chinese = chinese_name;
-            Match profile_match = sirowiki_profile_regex.Match(Source, Source.IndexOf("基本情報"));
+            opr.Name.Chinese = chinese_name_match.Groups[1].Value.Trim();
+            Match english_name_match = english_name_regex.Match(Source);
+            if(english_name_match.Success) {
+                opr.Name.English = english_name_match.Groups[1].Value.Trim();
+            }
+            Match profile_match = profile_regex.Match(Source, Source.IndexOf("基本情報"));
             if(!profile_match.Success) {
                 return null;
             }
@@ -42,6 +47,9 @@ namespace AOM_DataCreate.HtmlParser.SiroWiki {
                 //switch(profile_column_match.Groups[1].Value.Trim()) {
                 string v = column[^1];
                 switch(column[0]) {
+                    case "コードネーム":
+                        opr.Name.Japanese = v;
+                        break;
                     case "陣営":
                         opr.Camp.Japanese = v;
                         break;
@@ -82,6 +90,9 @@ namespace AOM_DataCreate.HtmlParser.SiroWiki {
                         opr.Promotion[promotion].Add(m_set);
                     }
                 }
+            }
+            Match skill_match = HtmlParser.TableBodyRegex.Match(Source, Source.IndexOf("スキルランク素材一覧  "));
+            if(skill_match.Success) {
             }
             return opr;
         }

@@ -18,7 +18,7 @@ namespace AOM_DataCreate.HtmlParser.SiroWiki {
         public OperatorList(string source) : base(source) {
         }
 
-        public List<COperator> GetOperators() {
+        public List<COperator> GetOperators(Dictionary<int, CNameSet> material_dic) {
             List<COperator> operators = new();
             GetSource(5);
             if(Source == null) return operators;
@@ -26,7 +26,7 @@ namespace AOM_DataCreate.HtmlParser.SiroWiki {
             foreach(Match match in sirowiki_list_regex.Matches(Source, Source.IndexOf("募集タグ"))) {
                 //Console.WriteLine(match.Groups[2].Value);
                 Operator operator_parser = new(new Uri(match.Groups[1].Value.Trim()));
-                COperator? opr = operator_parser.Parse();
+                COperator? opr = operator_parser.Parse(material_dic);
                 if(opr == null) continue;
                 opr.Name.Japanese = match.Groups[2].Value.Trim();
                 operators.Add(opr);
