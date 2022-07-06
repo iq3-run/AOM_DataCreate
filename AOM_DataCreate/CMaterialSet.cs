@@ -7,18 +7,34 @@ using System.Threading.Tasks;
 namespace AOM_DataCreate {
     internal class CMaterialSet {
         public int ID { get; set; }
-        public string Name { get; set; }
+        public CNameSet Name { get; set; }
         public int Quantity { get; set; }
 
         public CMaterialSet() {
-            Name = "";
+            Name = new();
             Quantity = 0;
         }
 
-        public CMaterialSet(int id, string name, int quantity) {
+        public CMaterialSet(int id, CNameSet name, int quantity) {
             ID = id;
             Name = name;
             Quantity = quantity;
+        }
+
+        public CMaterialSet(KeyValuePair<int, CNameSet> material, int quantity) {
+            ID = material.Key;
+            Name = material.Value;
+            Quantity = quantity;
+        }
+
+        public void SetMaterial(KeyValuePair<int, CNameSet> material) {
+            ID = material.Key;
+            Name = material.Value;
+        }
+
+        public void SetMaterial(int ID, CNameSet name) {
+            this.ID = ID;
+            this.Name = name;
         }
 
         override public string ToString() {

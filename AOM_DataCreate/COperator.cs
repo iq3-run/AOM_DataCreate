@@ -43,23 +43,46 @@ namespace AOM_DataCreate {
         public CNameSet Camp { get; set; }
         public CNameSet Race { get; set; }
 
-        private List<COperator> alternative;
+        private readonly List<COperator> alternative;
         public List<COperator> Alternative { get { return alternative; } }
 
-        private List<CMaterialSet>[] promotion = new List<CMaterialSet>[2];
+        public List<CMaterialSet>[] Materials {
+            get {
+                List<List<CMaterialSet>> m = new();
+                for(int i = 0; i < promotion.Length; i++) {
+                    m.Add(promotion[i]);
+                }
+                for(int i = 0; i < skill.Length; i++) {
+                    m.Add(skill[i]);
+                }
+                for(int i = 0; i < skill_sp.GetLength(0); i++) {
+                    for(int j = 0; j < skill_sp.GetLength(1); j++) {
+                        m.Add(skill_sp[i, j]);
+                    }
+                }
+                for(int i = 0; i < module.GetLength(0); i++) {
+                    for(int j = 0; j < module.GetLength(1); j++) {
+                        m.Add(module[i, j]);
+                    }
+                }
+                return m.ToArray();
+            }
+        }
+
+        private readonly List<CMaterialSet>[] promotion = new List<CMaterialSet>[2];
         public List<CMaterialSet>[] Promotion { get { return promotion; } }
 
-        private List<CMaterialSet>[] skill = new List<CMaterialSet>[6];
+        private readonly List<CMaterialSet>[] skill = new List<CMaterialSet>[6];
         public List<CMaterialSet>[] Skill { get { return skill; } }
 
-        private List<CMaterialSet>[,] skill_sp = new List<CMaterialSet>[3, 3];
+        private readonly List<CMaterialSet>[,] skill_sp = new List<CMaterialSet>[3, 3];
         public List<CMaterialSet>[,] SkillSP { get { return skill_sp; } }
 
-        private List<CMaterialSet>[,] module = new List<CMaterialSet>[2, 3];
+        private readonly List<CMaterialSet>[,] module = new List<CMaterialSet>[2, 3];
         public List<CMaterialSet>[,] Module { get { return module; } }
 
-        public bool isGlobal { get; set; }
-        public bool isParadox { get; set; }
+        public bool IsGlobal { get; set; }
+        public bool IsParadox { get; set; }
         public COperator? Parent { get; set; }
 
         public COperator() {
@@ -90,13 +113,13 @@ namespace AOM_DataCreate {
                 }
             }
             alternative = new List<COperator>();
-            isGlobal = true;
-            isParadox = true;
+            IsGlobal = true;
+            IsParadox = true;
         }
 
         public COperator CreateAlter() {
             if(Parent == null) {
-                COperator alter = new COperator();
+                COperator alter = new();
                 alternative.Add(alter);
                 alter.name = name;
                 alter.ID = ID;
@@ -109,6 +132,19 @@ namespace AOM_DataCreate {
                 return alter;
             } else {
                 return Parent.CreateAlter();
+            }
+        }
+
+        public void AddAlter(COperator alter) {
+            if(Parent == null) {
+                alternative.Add(alter);
+                alter.Parent = this;
+                foreach(var item in alter.Alternative) {
+                    this.AddAlter(item);
+                }
+                alter.alternative.Clear();
+            } else {
+                Parent.AddAlter(alter);
             }
         }
 
@@ -138,44 +174,55 @@ namespace AOM_DataCreate {
                 if(Race.English.Length == 0) Race.English = other.Race.English;
                 if(Race.Chinese.Length == 0) Race.Chinese = other.Race.Chinese;
                 if(alternative.Count == 0) {
-                    alternative = other.alternative;
+                    alternative.AddRange(other.alternative);
                     foreach(var item in alternative) {
                         item.Parent = this;
                     }
-                }
-                for(int i = 0; i < promotion.Length; i++) {
-                    if(promotion[i].Count == 0) promotion[i] = other.promotion[i];
-                }
-                for(int i = 0; i < skill.Length; i++) {
-                    if(skill[i].Count == 0) skill[i] = other.skill[i];
-                }
-                for(int i = 0; i < skill_sp.GetLength(0); i++) {
-                    for(int j = 0; j < skill_sp.GetLength(1); j++) {
-                        if(skill_sp[i, j].Count == 0) skill_sp[i, j] = other.skill_sp[i, j];
+                } else {
+                    for(int i = 0; i < alternative.Count && i < other.alternative.Count; i++) {
+                        alternative[i].TryMerge(other.alternative[i]);
                     }
                 }
-                for(int i = 0; i < module.GetLength(0); i++) {
-                    for(int j = 0; j < module.GetLength(1); j++) {
-                        if(module[i, j].Count == 0) module[i, j] = other.module[i, j];
+
+                for(int i = 0; i < Materials.Length; i++) {
+                    if(Materials[i].Count == 0) Materials[i].AddRange(other.Materials[i]);
+                    else {
+                        foreach(var material_f in Materials[i]) {
+                            if(material_f.Name.Equals("龍門幣")) continue;
+                            CMaterialSet? material_t = other.Materials[i].Find(m => m.ID == material_f.ID);
+                            if(material_t == null) {
+                                Console.WriteLine("<{0} {1}-{2}: {3}", ID, Name.Japanese, (Step)i, material_f.Name.Japanese);
+                                continue;
+                            }
+                            if(material_f.Quantity != material_t.Quantity) {
+                                Console.WriteLine("!{0} {1}-{2}: {3} x{4} <> x{5}", ID, Name.Japanese, (Step)i, material_f.Name.Japanese, material_f.Quantity, material_t.Quantity);
+                            }
+                        }
+                        foreach(var material_t in other.Materials[i].FindAll(mt => !Materials[i].Exists(mf => mt.ID == mf.ID))) {
+                            Console.WriteLine(">{0} {1}-{2}: {3}", ID, Name.Japanese, (Step)i, material_t.Name.Japanese);
+                        }
                     }
                 }
-                if(isGlobal) isGlobal = other.isGlobal;
-                if(isParadox) isParadox = other.isParadox;
+
+                if(IsGlobal) IsGlobal = other.IsGlobal;
+                if(IsParadox) IsParadox = other.IsParadox;
                 return true;
             } else {
                 return false;
             }
         }
 
+
         public string ExportOpeData() {
-            StringWriter sw = new StringWriter();
+            StringWriter sw = new();
             bool writeed = false;
             int step = 0;
-            for(int i = 0; i < promotion.Length; i++) {
-                if(promotion[i].Count > 0) {
+            for(int i = 0; i < Materials.Length; i++) {
+                if(Materials[i].Count > 0) {
+                    if(i == (int)Step.SLv1to2 && !writeed) sw.WriteLine("{0}\t0\t\t\t\t\t\t", ID);
                     sw.Write("{0}\t{1}", ID, step);
                     int k = 0;
-                    foreach(var item in promotion[i]) {
+                    foreach(var item in Materials[i]) {
                         if(!item.Name.Equals("龍門幣")) {
                             sw.Write("\t{0}\t{1}", item.ID, item.Quantity);
                             k++;
@@ -188,65 +235,6 @@ namespace AOM_DataCreate {
                     writeed = true;
                 }
                 step++;
-            }
-            for(int i = 0; i < skill.Length; i++) {
-                if(skill[i].Count > 0) {
-                    if(!writeed) sw.WriteLine("{0}\t0\t\t\t\t\t\t", ID);
-                    sw.Write("{0}\t{1}", ID, step);
-                    int k = 0;
-                    foreach(var item in skill[i]) {
-                        if(!item.Name.Equals("龍門幣")) {
-                            sw.Write("\t{0}\t{1}", item.ID, item.Quantity);
-                            k++;
-                        }
-                    }
-                    for(; k < 3; k++) {
-                        sw.Write("\t\t");
-                    }
-                    sw.WriteLine();
-                    writeed = true;
-                }
-                step++;
-            }
-            for(int i = 0; i < skill_sp.GetLength(0); i++) {
-                for(int j = 0; j < skill_sp.GetLength(1); j++) {
-                    if(skill_sp[i, j].Count > 0) {
-                        sw.Write("{0}\t{1}", ID, step);
-                        int k = 0;
-                        foreach(var item in skill_sp[i, j]) {
-                            if(!item.Name.Equals("龍門幣")) {
-                                sw.Write("\t{0}\t{1}", item.ID, item.Quantity);
-                                k++;
-                            }
-                        }
-                        for(; k < 3; k++) {
-                            sw.Write("\t\t");
-                        }
-                        sw.WriteLine();
-                        writeed = true;
-                    }
-                    step++;
-                }
-            }
-            for(int i = 0; i < module.GetLength(0); i++) {
-                for(int j = 0; j < module.GetLength(1); j++) {
-                    if(module[i, j].Count > 0) {
-                        sw.Write("{0}\t{1}", ID, step);
-                        int k = 0;
-                        foreach(var item in module[i, j]) {
-                            if(!item.Name.Equals("龍門幣")) {
-                                sw.Write("\t{0}\t{1}", item.ID, item.Quantity);
-                                k++;
-                            }
-                        }
-                        for(; k < 3; k++) {
-                            sw.Write("\t\t");
-                        }
-                        sw.WriteLine();
-                        writeed = true;
-                    }
-                    step++;
-                }
             }
             if(!writeed) sw.WriteLine("{0}\t-\t\t\t\t\t\t", ID);
             return sw.ToString();
@@ -261,9 +249,8 @@ namespace AOM_DataCreate {
         }
 
         public override bool Equals(object? obj) {
-            if (obj == null) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
+            if(obj == null) return false;
+            if(ReferenceEquals(this, obj)) return true;
             if(obj is COperator other) {
                 if(ID.Length > 0 && ID.Equals(other.ID)) return true;
                 if(ID.Length == 0 || other.ID.Length == 0) {
@@ -272,11 +259,108 @@ namespace AOM_DataCreate {
                     if(Name.English.Length > 0 && Name.English.Equals(other.Name.English)) return true;
                 }
             }
+            if(obj is string value) {
+                if(ID.Length > 0 && ID.Equals(value)) return true;
+                if(Name.Chinese.Length > 0 && Name.Chinese.Equals(value)) return true;
+                if(Name.Japanese.Length > 0 && Name.Japanese.Equals(value)) return true;
+                if(Name.English.Length > 0 && Name.English.Equals(value)) return true;
+            }
             return false;
         }
 
         public override int GetHashCode() {
             return base.GetHashCode();
+        }
+
+        public enum Step {
+            昇進1,
+            昇進2,
+            SLv1to2,
+            SLv2to3,
+            SLv3to4,
+            SLv4to5,
+            SLv5to6,
+            SLv6to7,
+            S1特化1,
+            S1特化2,
+            S1特化3,
+            S2特化1,
+            S2特化2,
+            S2特化3,
+            S3特化1,
+            S3特化2,
+            S3特化3,
+            モジュールXLv1,
+            モジュールXLv2,
+            モジュールXLv3,
+            モジュールYLv1,
+            モジュールYLv2,
+            モジュールYLv3,
+        }
+
+        static public void Diff(COperator op1, COperator op2) {
+            //if(!op1.ID.Equals(op2.ID)) Console.WriteLine("ID: {0} <> {1}", op1.ID, op2.ID);
+            //if(!op1.Rarity.Equals(op2.Rarity)) Console.WriteLine("{0} {1}-Rarity: ☆{2} <> ☆{3}", op1.ID, op1.Name.Japanese, op1.Rarity, op2.Rarity);
+            //if(!op1.Name.Japanese.Equals(op2.Name.Japanese)) Console.WriteLine("{0} {1}-コードネーム(日): {1} <> {2}", op1.ID, op1.Name.Japanese, op2.Name.Japanese);
+            //if(!op1.Name.Chinese.Equals(op2.Name.Chinese)) Console.WriteLine("{0} {1}-コードネーム(中): {2} <> {3}", op1.ID, op1.Name.Japanese, op1.Name.Chinese, op2.Name.Chinese);
+            //if(!op1.Name.English.Equals(op2.Name.English)) Console.WriteLine("{0} {1}-コードネーム(英): {2} <> {3}", op1.ID, op1.Name.Japanese, op1.Name.English, op2.Name.English);
+            //if(!op1.Class.Japanese.Equals(op2.Class.Japanese)) Console.WriteLine("{0} {1}-クラス(日): {2} <> {3}", op1.ID, op1.Name.Japanese, op1.Class.Japanese, op2.Class.Japanese);
+            //if(!op1.Class.Chinese.Equals(op2.Class.Chinese)) Console.WriteLine("{0} {1}-クラス(中): {2} <> {3}", op1.ID, op1.Name.Japanese, op1.Class.Chinese, op2.Class.Chinese);
+            //if(!op1.Class.English.Equals(op2.Class.English)) Console.WriteLine("{0} {1}-クラス(英): {2} <> {3}", op1.ID, op1.Name.Japanese, op1.Class.English, op2.Class.English);
+            //if(!op1.SubClass.Japanese.Equals(op2.SubClass.Japanese)) Console.WriteLine("{0} {1}-職分(日): {2} <> {3}", op1.ID, op1.Name.Japanese, op1.SubClass.Japanese, op2.SubClass.Japanese);
+            //if(!op1.SubClass.Chinese.Equals(op2.SubClass.Chinese)) Console.WriteLine("{0} {1}-職分(中): {2} <> {3}", op1.ID, op1.Name.Japanese, op1.SubClass.Chinese, op2.SubClass.Chinese);
+            //if(!op1.SubClass.English.Equals(op2.SubClass.English)) Console.WriteLine("{0} {1}-職分(英): {2} <> {3}", op1.ID, op1.Name.Japanese, op1.SubClass.English, op2.SubClass.English);
+            for(int i = 0; i < op1.Materials.Length; i++) {
+                foreach(var material_f in op1.Materials[i]) {
+                    if(material_f.Name.Equals("龍門幣")) continue;
+                    CMaterialSet? material_t = op2.Materials[i].Find(m => m.ID == material_f.ID);
+                    if(material_t == null) {
+                        Console.WriteLine("{0} {1}-{2}: {3} <", op1.ID, op1.Name.Japanese, (Step)i, material_f.Name.Japanese);
+                        continue;
+                    }
+                    if(material_f.Quantity != material_t.Quantity) {
+                        Console.WriteLine("{0} {1}-{2}: {3} x{4} <> x{5}", op1.ID, op1.Name.Japanese, (Step)i, material_f.Name.Japanese, material_f.Quantity, material_t.Quantity);
+                    }
+                }
+                foreach(var material_t in op2.Materials[i].FindAll(mt => !op1.Materials[i].Exists(mf => mt.ID == mf.ID))) {
+                    Console.WriteLine("{0} {1}-{2}: > {3}", op1.ID, op1.Name.Japanese, (Step)i, material_t.Name.Japanese);
+                }
+            }
+        }
+        public static void Diff(COperator op1, COperator op2, COperator op3) {
+            for(int i = 0; i < op1.Materials.Length; i++) {
+                foreach(var m1 in op1.Materials[i]) {
+                    if(m1.Name.Equals("龍門幣")) continue;
+                    CMaterialSet? m2 = op2.Materials[i].Find(m => m.ID == m1.ID);
+                    CMaterialSet? m3 = op3.Materials[i].Find(m => m.ID == m1.ID);
+                    if(m2 != null && m3 != null) {
+                        if(m1.Quantity != m2.Quantity || m1.Quantity != m3.Quantity) {
+                            Console.WriteLine("{0} {1}-{2}: {3} x{4}, x{5}, x{6}", op1.ID, op1.Name.Japanese, (Step)i, m1.Name.Japanese, m1.Quantity, m2.Quantity, m3.Quantity);
+                        }
+                    } else {
+                        if(m2 != null) {
+                            //Console.WriteLine("{0} {1}-{2}: {3} x{4}, x{5}, x{6}", op1.ID, op1.Name.Japanese, (Step)i, m1.Name.Japanese, m1.Quantity, m2.Quantity, "-");
+                        } else if(m3 != null) {
+                            Console.WriteLine("{0} {1}-{2}: {3} x{4}, x{5}, x{6}", op1.ID, op1.Name.Japanese, (Step)i, m1.Name.Japanese, m1.Quantity, "-", m3.Quantity);
+                        } else {
+                            //Console.WriteLine("{0} {1}-{2}: {3} x{4}, x{5}, x{6}", op1.ID, op1.Name.Japanese, (Step)i, m1.Name.Japanese, m1.Quantity, "-", "-");
+                        }
+                    }
+                }
+                foreach(var m2 in op2.Materials[i].FindAll(mt => !op1.Materials[i].Exists(mf => mt.ID == mf.ID))) {
+                    if(m2.Name.Equals("龍門幣")) continue;
+                    CMaterialSet? m3 = op3.Materials[i].Find(m => m.ID == m2.ID);
+                    if(m3 != null) {
+                        Console.WriteLine("{0} {1}-{2}: {3} x{4}, x{5}, x{6}", op1.ID, op1.Name.Japanese, (Step)i, m2.Name.Japanese, "-", m2.Quantity, m3.Quantity);
+                    } else {
+                        //Console.WriteLine("{0} {1}-{2}: {3} x{4}, x{5}, x{6}", op1.ID, op1.Name.Japanese, (Step)i, m2.Name.Japanese, "-", m2.Quantity, "-");
+                    }
+                }
+                foreach(var m3 in op3.Materials[i].FindAll(mt => !op1.Materials[i].Exists(mf => mt.ID == mf.ID) && !op2.Materials[i].Exists(mf => mt.ID == mf.ID))) {
+                    if(m3.Name.Equals("龍門幣")) continue;
+                    //Console.WriteLine("{0} {1}-{2}: {3} x{4}, x{5}, x{6}", op1.ID, op1.Name.Japanese, (Step)i, m3.Name.Japanese, "-", "-", m3.Quantity);
+                }
+            }
         }
     }
 }
