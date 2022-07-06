@@ -18,7 +18,7 @@ namespace AOM_DataCreate.HtmlParser.PRTS {
 
         public OperatorList(string source) : base(source) {
         }
-        public List<COperator> GetOperators(Dictionary<int, CNameSet> material_dic) {
+        public List<COperator> GetOperators(Dictionary<int, CNameSet> material_dic, bool check_detail = true) {
             List<COperator> operators = new();
             GetSource(5);
             if(Source == null) return operators;
@@ -65,8 +65,10 @@ namespace AOM_DataCreate.HtmlParser.PRTS {
                     }
                 }
                 Console.WriteLine("{0}", @operator.Name);
-                Operator operator_parser = new(new Uri(System.Web.HttpUtility.UrlPathEncode(@"https://prts.wiki/w/" + @operator.Name.Chinese)));
-                operator_parser.Parse(@operator, material_dic);
+                if(check_detail) {
+                    Operator operator_parser = new(new Uri(System.Web.HttpUtility.UrlPathEncode(@"https://prts.wiki/w/" + @operator.Name.Chinese)));
+                    operator_parser.Parse(@operator, material_dic);
+                }
                 COperator? alter = operators.Find(o => o.Equals(@operator));
                 if(alter == null) {
                     operators.Add(@operator);

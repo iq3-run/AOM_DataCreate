@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 
 namespace AOM_DataCreate.HtmlParser {
     internal abstract class HtmlParser {
+        public static readonly Regex TableRegex = new(@"<table[^>]*?>(.+?)</table>", RegexOptions.Singleline);
+        public static readonly Regex TableHeadRegex = new(@"<thead>(.+?)</thead>", RegexOptions.Singleline);
         public static readonly Regex TableBodyRegex = new(@"<tbody>(.+?)</tbody>", RegexOptions.Singleline);
         public static readonly Regex TableLineRegex = new(@"<tr>(.+?)</tr>", RegexOptions.Singleline);
         public static readonly Regex TableCellRegex = new(@"<(?:td|th)[^>]*?>(.+?)</(?:td|th)>", RegexOptions.Singleline);

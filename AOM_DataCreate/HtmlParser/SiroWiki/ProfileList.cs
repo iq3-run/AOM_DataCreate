@@ -8,13 +8,14 @@ using System.Threading.Tasks;
 namespace AOM_DataCreate.HtmlParser.SiroWiki {
     internal class ProfileList : HtmlParser {
         const string URL = @"https://arknights.wikiru.jp/index.php?%A5%ED%A5%C9%A5%B9%BF%CD%BB%F6%B2%DD%A5%D5%A5%A1%A5%A4%A5%EB";
+        static readonly Regex anker_regex = new(@"<a[^>]*href=""(.+?)""[^>]*>");
 
         public ProfileList() : base(new Uri(URL)) {
         }
 
         public ProfileList(string source) : base(source) {
         }
-        public List<COperator> GetOperators() {
+        public List<COperator> GetOperators(Dictionary<int, CNameSet> material_dic, bool check_detail = true) {
             List<COperator> operators = new();
             GetSource(5);
             if(Source == null) return operators;
@@ -26,7 +27,7 @@ namespace AOM_DataCreate.HtmlParser.SiroWiki {
                     for(int i = 0; i < profile_data.Length; i++) {
                         profile_data[i] = TagRegex.Replace(profile_data[i], "").Trim();
                     }
-                    //Console.WriteLine(profile_data[1]);
+                    Console.WriteLine(profile_data[1]);
                     if(profile_data.Length == 21) {
                         opr.ID = profile_data[(int)ProfileColumn.図鑑コード];
                         opr.Name.Japanese = profile_data[(int)ProfileColumn.コードネーム];
@@ -40,14 +41,22 @@ namespace AOM_DataCreate.HtmlParser.SiroWiki {
                         opr.Birthplace.Japanese = profile_data[(int)RobotColumn.産地];
                         operators.Add(opr);
                     }
+                    if(check_detail) {
+                        Match anker_match = anker_regex.Match(line.Groups[1].Value);
+                        if(anker_match.Success) {
+                            Uri operator_url = new(anker_match.Groups[1].Value.Trim());
+                            Operator operator_perser = new(operator_url);
+                            operator_perser.Parse(opr, material_dic);
+                        }
+                    }
                 }
             }
 
             return operators;
         }
 
-        public void MargeOperators(List<COperator> base_operators) {
-            List<COperator> add_operators = GetOperators();
+        public void MargeOperators(List<COperator> base_operators, Dictionary<int, CNameSet> material_dic) {
+            List<COperator> add_operators = GetOperators(material_dic);
             foreach(COperator opr_base in base_operators) {
                 COperator? opr_add = add_operators.Find(oa => oa.Equals(opr_base));
                 if(opr_add != null) {

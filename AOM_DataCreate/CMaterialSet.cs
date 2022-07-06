@@ -27,6 +27,16 @@ namespace AOM_DataCreate {
             Quantity = quantity;
         }
 
+        public void SetMaterial(KeyValuePair<int, CNameSet> material) {
+            ID = material.Key;
+            Name = material.Value;
+        }
+
+        public void SetMaterial(int ID, CNameSet name) {
+            this.ID = ID;
+            this.Name = name;
+        }
+
         override public string ToString() {
             return string.Format("{0} x{1}", Name, Quantity);
         }

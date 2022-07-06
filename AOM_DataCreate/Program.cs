@@ -88,7 +88,7 @@ operator_list = kuro_ope_list_parser.MargeOperator(prts_charas, material_dic2, p
 
 Console.WriteLine("白Wiki");
 SiroWiki.ProfileList profileList = new();
-profileList.MargeOperators(operator_list);
+profileList.MargeOperators(operator_list, material_dic2);
 
 Regex split_mark_regex = new(@"\W+");
 
